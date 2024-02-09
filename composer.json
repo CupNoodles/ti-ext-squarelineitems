@@ -1,0 +1,24 @@
+{
+    "name": "cupnoodles/ti-ext-squarelineitems",
+    "type": "tastyigniter-extension",
+    "description": "Square payment method with order line items.",
+    "authors": [
+      {
+        "name": "CupNoodles"
+      }
+    ],
+    "extra": {
+      "tastyigniter-extension": {
+        "code": "cupnoodles.squarelineitems",
+        "name": "Square Line Items",
+        "icon": {
+          "class": "fa fa-shopping-cart",
+          "color": "#fff",
+          "backgroundColor": "#000"
+        },
+        "require": {
+            "igniter.payregister": "*"
+          }
+      }
+    }
+}
