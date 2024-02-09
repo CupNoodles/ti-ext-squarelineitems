@@ -69,7 +69,7 @@ class SquareLineItems extends Square
                         
                         $taxes[] = OrderLineItemTaxBuilder::init()
                         ->name($ot->title)
-                        ->percentage( ($ot->value / $subtotal) * 100 ) 
+                        ->percentage( number_format(($ot->value / $subtotal) * 100, 4) ) 
                         ->appliedMoney($taxMoney)
                         ->scope(OrderLineItemTaxScope::ORDER)
                         ->build();
