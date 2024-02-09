@@ -20,5 +20,8 @@
             "igniter.payregister": "*"
           }
       }
+    },
+    "require": {
+      "square/square": "34.0.1.20240118"
     }
 }
