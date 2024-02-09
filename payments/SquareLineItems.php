@@ -13,6 +13,9 @@ use Square\Models\Builders\OrderBuilder;
 use Square\Models\Builders\MoneyBuilder;
 use Square\SquareClient;
 
+
+use Illuminate\Support\Facades\Log;
+
 class SquareLineItems extends Square
 {
 
@@ -25,13 +28,7 @@ class SquareLineItems extends Square
 
     public function createPayment($fields, $order, $host)
     {
-        try {
 
-        }        
-        catch (Exception $ex) {
-            $order->logPaymentAttempt('Payment error -> '.$ex->getMessage(), 0, $fields, []);
-            throw new ApplicationException('Error creating Square Payments object');
-        }
 
         try {
 
@@ -102,6 +99,8 @@ class SquareLineItems extends Square
                 
                 $errors = $apiResponse->getErrors();
                 $order->logPaymentAttempt('Payment error -> '. print_r($errors, true), 0, $fields, []);
+                Log::info(print_r($errors, true));
+
             }
 
         }        
@@ -145,7 +144,6 @@ class SquareLineItems extends Square
                 $tipMoney->setCurrency($fields['currency']);
                 $body->setTipMoney($tipMoney);
             }
-
 
             $response = $paymentsApi->createPayment($body);
 
