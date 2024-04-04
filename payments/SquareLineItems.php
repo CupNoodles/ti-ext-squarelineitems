@@ -38,6 +38,7 @@ class SquareLineItems extends Square
             $idempotencyKey = str_random();
 
             $lineItems = [];
+
             foreach($order->getOrderMenusWithOptions() as $menu){
 
                 $lineItems[] = OrderLineItemBuilder::init($menu->quantity)
@@ -56,7 +57,10 @@ class SquareLineItems extends Square
             $subtotal = 0;
             foreach($order->getOrderTotals() as $ot){
                 if($ot->code == 'subtotal'){
-                    $subtotal = $ot->value;
+                    $subtotal += $ot->value;
+                }
+                if($ot->code == 'driver_tip'){
+                    $subtotal += $ot->value;
                 }
             }
             foreach($order->getOrderTotals() as $ot){
@@ -91,7 +95,23 @@ class SquareLineItems extends Square
                     ->build();
                 }
 
+                // driver_tip is a custom order total line added via Relay checkout - add as a line item in order to differntiate it from staff tip 
+                if($ot->code == 'driver_tip'){
+                    $lineItems[] = OrderLineItemBuilder::init(1)
+                    ->name('Driver Tip')
+                    ->basePriceMoney(
+                        MoneyBuilder::init()
+                            ->amount($ot->value * 100)
+                            ->currency($fields['currency'])
+                            ->build()
+                    )
+                    ->unsetAppliedTaxes(0)
+                    ->build();
+                }
+
             }
+
+            
 
             
             $body = CreateOrderRequestBuilder::init()
@@ -112,7 +132,6 @@ class SquareLineItems extends Square
             if ($apiResponse->isSuccess()) {
                 $createOrderResponse = $apiResponse->getResult();
                 $createdOrderID = $createOrderResponse->getOrder()->getID();
-                Log::info(print_r($createOrderResponse, true));
             } else {
                 
                 $errors = $apiResponse->getErrors();
@@ -132,9 +151,9 @@ class SquareLineItems extends Square
             
             $client = $this->createClient();
             $paymentsApi = $client->getPaymentsApi();
-
+            
             $amountMoney = new Models\Money();
-            $amountMoney->setAmount($fields['amount'] * 100);
+            $amountMoney->setAmount(($fields['amount'] * 100) );
             $amountMoney->setCurrency($fields['currency']);
 
             $body = new Models\CreatePaymentRequest($fields['sourceId'], $idempotencyKey, $amountMoney);
@@ -163,7 +182,6 @@ class SquareLineItems extends Square
             }
 
             $response = $paymentsApi->createPayment($body);
-
             $this->handlePaymentResponse($response, $order, $host, $fields);
         }
         catch (Exception $ex) {
