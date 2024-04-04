@@ -8,6 +8,7 @@ use Square\Models;
 use Square\Models\OrderLineItemTaxScope;
 use Square\Models\Builders\OrderLineItemBuilder;
 use Square\Models\Builders\OrderLineItemTaxBuilder;
+use Square\Models\Builders\OrderServiceChargeBuilder;
 use Square\Models\Builders\CreateOrderRequestBuilder;
 use Square\Models\Builders\OrderBuilder;
 use Square\Models\Builders\MoneyBuilder;
@@ -51,6 +52,7 @@ class SquareLineItems extends Square
             }
 
             $taxes = [];
+            $serviceCharges = [];
             $subtotal = 0;
             foreach($order->getOrderTotals() as $ot){
                 if($ot->code == 'subtotal'){
@@ -58,7 +60,7 @@ class SquareLineItems extends Square
                 }
             }
             foreach($order->getOrderTotals() as $ot){
-
+ 
                 if($ot->code == 'tax' || stripos($ot->title, 'tax') !== false){
                     if($ot->value != 0){
 
@@ -76,13 +78,28 @@ class SquareLineItems extends Square
                     }
                 }
 
+                if($ot->code == 'delivery'){
+                    $deliveryMoney = new Models\Money();
+                    $deliveryMoney->setAmount($ot->value * 100);
+                    $deliveryMoney->setCurrency($fields['currency']);
+
+
+                    $serviceCharges[] = OrderServiceChargeBuilder::init()
+                    ->name($ot->title)
+                    ->amountMoney($deliveryMoney)
+                    ->calculationPhase('TOTAL_PHASE')
+                    ->build();
+                }
+
             }
+
             
             $body = CreateOrderRequestBuilder::init()
             ->order( OrderBuilder::init( $this->getLocationId() )
                 ->referenceId($order->order_id)
                 ->lineItems($lineItems)
                 ->taxes($taxes)
+                ->serviceCharges($serviceCharges)
                 ->build()
             )
             ->idempotencyKey($idempotencyKey)
@@ -95,12 +112,12 @@ class SquareLineItems extends Square
             if ($apiResponse->isSuccess()) {
                 $createOrderResponse = $apiResponse->getResult();
                 $createdOrderID = $createOrderResponse->getOrder()->getID();
+                Log::info(print_r($createOrderResponse, true));
             } else {
                 
                 $errors = $apiResponse->getErrors();
-                $order->logPaymentAttempt('Payment error -> '. print_r($errors, true), 0, $fields, []);
                 Log::info(print_r($errors, true));
-
+                $order->logPaymentAttempt('Payment error -> '. print_r($errors, true), 0, $fields, []);
             }
 
         }        
