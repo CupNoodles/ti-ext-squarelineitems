@@ -9,30 +9,21 @@
         this.card = null
         this.payments = null
         this.initialized = null
-        console.log('here');
         $('[name=payment][value=squarelineitems]', this.$checkoutForm).on('change', $.proxy(this.init, this))
     }
 
     ProcessSquareLineItems.prototype.init = function () {
-        console.log('here');
         if(!this.initialized){
-            console.log('here');
             if (!$('#'+this.sqElementID).length)
                 return
-                console.log('here');
             if (this.options.applicationId === undefined)
                 throw new Error('Missing square application id')
-                console.log('here');
             this.payments = window.Square.payments(this.options.applicationId, this.options.locationId);
-            console.log('here');
             this.initializeCard(this.payments).catch(e => {
                 throw new Error('Initializing Card failed', e)
             });
-            console.log('here');
             this.$checkoutForm.on('submitCheckoutForm', $.proxy(this.submitFormHandler, this))
-            console.log('here');
             this.initialized = true
-            console.log('here');
         }
     }
 
