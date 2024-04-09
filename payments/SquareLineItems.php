@@ -12,6 +12,9 @@ use Square\Models\Builders\OrderServiceChargeBuilder;
 use Square\Models\Builders\CreateOrderRequestBuilder;
 use Square\Models\Builders\OrderBuilder;
 use Square\Models\Builders\MoneyBuilder;
+use Square\Models\Builders\OrderQuantityUnitBuilder;
+use Square\Models\Builders\MeasurementUnitBuilder;
+use Square\Models\Builders\MeasurementUnitCustomBuilder;
 use Square\SquareClient;
 
 
@@ -41,7 +44,28 @@ class SquareLineItems extends Square
 
             foreach($order->getOrderMenusWithOptions() as $menu){
 
-                $lineItems[] = OrderLineItemBuilder::init($menu->quantity)
+                if($menu->quantity != $menu->quantity % 1 ){ // this is only necessary if you have fractional qtys, for instance if you're using pricebyweight
+                    $lineItems[] = OrderLineItemBuilder::init($menu->quantity)
+                    ->name($menu->name)
+                    ->quantityUnit(
+                        OrderQuantityUnitBuilder::init()
+                            ->measurementUnit(MeasurementUnitBuilder::init()
+                                ->customUnit(MeasurementUnitCustomBuilder::init($menu->uom_tag, $menu->uom_tag)->build())   
+                                ->build() 
+                            )
+                            ->precision($menu->uom_decimals)
+                            ->build()
+                    )
+                    ->basePriceMoney(
+                        MoneyBuilder::init()
+                            ->amount($menu->price * 100)
+                            ->currency($fields['currency'])
+                            ->build()
+                    )
+                    ->build();
+                }
+                else{
+                    $lineItems[] = OrderLineItemBuilder::init($menu->quantity)
                     ->name($menu->name)
                     ->basePriceMoney(
                         MoneyBuilder::init()
@@ -50,6 +74,8 @@ class SquareLineItems extends Square
                             ->build()
                     )
                     ->build();
+                }
+
             }
 
             $taxes = [];
