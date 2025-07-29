@@ -25,6 +25,7 @@ class SquareLineItems extends Square
 
     public function beforeRenderPaymentForm($host, $controller)
     {
+
         $endpoint = $this->isTestMode() ? 'sandbox.' : '';
         $controller->addJs('https://'.$endpoint.'web.squarecdn.com/v1/square.js', 'square-js');
         $controller->addJs('$/cupnoodles/squarelineitems/assets/js/process.squarelineitems.js', 'process-square-js');
@@ -44,9 +45,11 @@ class SquareLineItems extends Square
 
             foreach($order->getOrderMenusWithOptions() as $menu){
 
+                $category_name = \Admin\Models\Menus_model::find($menu->menu_id)->categories()->first()->name ?? '';
+
                 if($menu->quantity != $menu->quantity % 1 ){ // this is only necessary if you have fractional qtys, for instance if you're using pricebyweight
                     $lineItems[] = OrderLineItemBuilder::init($menu->quantity)
-                    ->name($menu->name)
+                    ->name($menu->name . '['.$category_name.']')
                     ->quantityUnit(
                         OrderQuantityUnitBuilder::init()
                             ->measurementUnit(MeasurementUnitBuilder::init()
@@ -66,7 +69,7 @@ class SquareLineItems extends Square
                 }
                 else{
                     $lineItems[] = OrderLineItemBuilder::init($menu->quantity)
-                    ->name($menu->name)
+                    ->name($menu->name . '['.$category_name.']')
                     ->basePriceMoney(
                         MoneyBuilder::init()
                             ->amount($menu->price * 100)
