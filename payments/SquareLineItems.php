@@ -46,10 +46,14 @@ class SquareLineItems extends Square
             foreach($order->getOrderMenusWithOptions() as $menu){
 
                 $category_name = \Admin\Models\Menus_model::find($menu->menu_id)->categories()->first()->name ?? '';
+                $square_item_id = \Admin\Models\Menus_model::find($menu->menu_id)->square_item_id ?? null;
 
+                
                 if($menu->quantity != $menu->quantity % 1 ){ // this is only necessary if you have fractional qtys, for instance if you're using pricebyweight
-                    $lineItems[] = OrderLineItemBuilder::init($menu->quantity)
+                    
+                    $lineItem = OrderLineItemBuilder::init($menu->quantity)
                     ->name($menu->name . '['.$category_name.']')
+                    ->catalogObjectID($menu->square_item_id ?? '')
                     ->quantityUnit(
                         OrderQuantityUnitBuilder::init()
                             ->measurementUnit(MeasurementUnitBuilder::init()
@@ -64,19 +68,33 @@ class SquareLineItems extends Square
                             ->amount($menu->price * 100)
                             ->currency($fields['currency'])
                             ->build()
-                    )
-                    ->build();
+                    );
+
+                    if($square_item_id){
+                        $lineItem->catalogObjectID($square_item_id);
+                    }
+
+
+                    $lineItems[] = $lineItem->build();
+                    
                 }
                 else{
-                    $lineItems[] = OrderLineItemBuilder::init($menu->quantity)
+                    $lineItem = OrderLineItemBuilder::init($menu->quantity)
                     ->name($menu->name . '['.$category_name.']')
+                    
                     ->basePriceMoney(
                         MoneyBuilder::init()
                             ->amount($menu->price * 100)
                             ->currency($fields['currency'])
                             ->build()
-                    )
-                    ->build();
+                    );
+                    
+                    if($square_item_id){
+                        $lineItem->catalogObjectID($square_item_id);
+                    }
+
+                    $lineItem->build();
+                    $lineItems[] = $lineItem;
                 }
 
             }
@@ -96,7 +114,6 @@ class SquareLineItems extends Square
  
                 if($ot->code == 'tax' || stripos($ot->title, 'tax') !== false){
                     if($ot->value != 0){
-
                         
                         $taxMoney = new Models\Money();
                         $taxMoney->setAmount($ot->value * 100);
@@ -157,6 +174,7 @@ class SquareLineItems extends Square
 
 
             $apiResponse = $ordersApi->createOrder($body);
+            Log::info(print_r($apiResponse, true));
 
             if ($apiResponse->isSuccess()) {
                 $createOrderResponse = $apiResponse->getResult();
@@ -209,8 +227,9 @@ class SquareLineItems extends Square
                 $tipMoney->setCurrency($fields['currency']);
                 $body->setTipMoney($tipMoney);
             }
-
+Log::info(print_r($body, true));
             $response = $paymentsApi->createPayment($body);
+
             $this->handlePaymentResponse($response, $order, $host, $fields);
         }
         catch (Exception $ex) {
